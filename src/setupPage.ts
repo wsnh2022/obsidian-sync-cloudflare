@@ -23,35 +23,13 @@ function escapeHtml(value: string): string {
 		.replace(/"/g, "&quot;");
 }
 
-const IS_MARKETPLACE_APPROVED = false;
-const DEFAULT_DEPLOY_REPO = "kavinsood/yaos";
-
-function normalizeDeployRepo(value: string | undefined): string {
-	const raw = value?.trim();
-	if (!raw) return DEFAULT_DEPLOY_REPO;
-	// Keep this strict: owner/repo style slug only.
-	if (!/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(raw)) {
-		return DEFAULT_DEPLOY_REPO;
-	}
-	return raw;
-}
 
 export function renderSetupPage(options: SetupPageOptions): string {
 	const safeHost = escapeHtml(options.host);
-	const deployRepo = normalizeDeployRepo(options.deployRepo);
-	const releaseZipUrl = `https://github.com/${deployRepo}/releases/latest/download/yaos.zip`;
 
 	// Cleaned up the installation copy slightly for better reading
-	const installationStep = IS_MARKETPLACE_APPROVED
-		? `<div class="step-text">
+	const installationStep = `<div class="step-text">
               In Obsidian, open <em>Settings → Community plugins</em>, search for <strong>YAOS</strong>, install it, and make sure it is <strong>enabled</strong>.
-           </div>`
-		: `<div class="step-text">
-              <ol>
-                <li>After opening BRAT, select <em>Add beta plugin</em> and paste <code>${deployRepo}</code>.</li>
-                <li>Return to Community plugins and make sure <strong>YAOS</strong> is installed and <strong>enabled</strong>.</li>
-              </ol>
-              <p class="micro-text">Prefer manual installation? <a href="${releaseZipUrl}">Download the zip</a>.</p>
            </div>`;
 
 	return `<!DOCTYPE html>
@@ -253,7 +231,7 @@ export function renderSetupPage(options: SetupPageOptions): string {
     .action-box p { font-size: 13px; margin-bottom: 4px;}
 
     #qr { background: #fff; padding: 8px; border-radius: 12px; display: inline-block;}
-    #qr canvas { display: block; border-radius: 4px; width: 120px; height: 120px;}
+    #qr img { display: block; border-radius: 4px; width: 120px; height: 120px;}
 
     /* Manual Fallback Accordion */
     details {
@@ -338,10 +316,6 @@ export function renderSetupPage(options: SetupPageOptions): string {
           <h2>Get the YAOS plugin</h2>
         </div>
         ${installationStep}
-        <div class="step-recovery">
-          <a class="ghost-btn ghost-btn--light" href="obsidian://show-plugin?id=obsidian42-brat">Open BRAT</a>
-          <button id="copy-repo-desktop" class="ghost-btn" type="button">Copy repo slug</button>
-        </div>
         <label class="checkbox-wrapper">
           <input id="installed" type="checkbox" />
           <span>I have installed and <strong>enabled</strong> YAOS.</span>
@@ -396,7 +370,6 @@ export function renderSetupPage(options: SetupPageOptions): string {
 
   </main>
 
-  <script src="https://cdn.jsdelivr.net/npm/qrious@4.0.2/dist/qrious.min.js"></script>
   <script>
     const initialView = document.getElementById("initial-view");
     const successFlow = document.getElementById("success-flow");
@@ -408,47 +381,34 @@ export function renderSetupPage(options: SetupPageOptions): string {
     const openBtn = document.getElementById("open");
     const qrEl = document.getElementById("qr");
 
-	    const hostInput = document.getElementById("host-input");
-	    const tokenInput = document.getElementById("token-input");
-	    const vaultInput = document.getElementById("vault-input");
-	    const copyHostBtn = document.getElementById("copy-host");
-	    const copyTokenBtn = document.getElementById("copy-token");
-	    const copyVaultBtn = document.getElementById("copy-vault");
-	    const copyRepoDesktopBtn = document.getElementById("copy-repo-desktop");
-	    const repoSlug = ${JSON.stringify(deployRepo)};
+    const hostInput = document.getElementById("host-input");
+    const tokenInput = document.getElementById("token-input");
+    const vaultInput = document.getElementById("vault-input");
+    const copyHostBtn = document.getElementById("copy-host");
+    const copyTokenBtn = document.getElementById("copy-token");
+    const copyVaultBtn = document.getElementById("copy-vault");
 
-	    function randomToken() {
-	      const bytes = new Uint8Array(32);
-	      crypto.getRandomValues(bytes);
-	      return Array.from(bytes, (value) => value.toString(16).padStart(2, "0")).join("");
-	    }
+    function randomToken() {
+      const bytes = new Uint8Array(32);
+      crypto.getRandomValues(bytes);
+      return Array.from(bytes, (value) => value.toString(16).padStart(2, "0")).join("");
+    }
 
-	    function randomVaultId() {
-	      const bytes = new Uint8Array(16);
-	      crypto.getRandomValues(bytes);
-	      let binary = "";
-	      for (const b of bytes) binary += String.fromCharCode(b);
-	      return btoa(binary).replace(/\\+/g, "-").replace(/\\//g, "_").replace(/=+$/g, "");
-	    }
+    function randomVaultId() {
+      const bytes = new Uint8Array(16);
+      crypto.getRandomValues(bytes);
+      let binary = "";
+      for (const b of bytes) binary += String.fromCharCode(b);
+      return btoa(binary).replace(/\\+/g, "-").replace(/\\//g, "_").replace(/=+$/g, "");
+    }
 
-	    function buildMobileSetupUrl(host, token, vaultId) {
-	      const hash = new URLSearchParams({ host: host, token: token, vaultId: vaultId }).toString();
-	      return host + "/mobile-setup#" + hash;
-	    }
-
-    function renderQr(text) {
-      if (!text || !window.QRious) return;
-      qrEl.innerHTML = "";
-      const canvas = document.createElement("canvas");
-      qrEl.appendChild(canvas);
-      new window.QRious({
-        element: canvas,
-        value: text,
-        size: 240,
-        level: "M",
-        foreground: "#08111d",
-        background: "#ffffff",
-      });
+    function renderQr(dataUrl) {
+      if (!dataUrl || !dataUrl.startsWith("data:image/svg+xml;base64,")) return;
+      qrEl.replaceChildren();
+      const image = document.createElement("img");
+      image.src = dataUrl;
+      image.alt = "YAOS mobile setup QR";
+      qrEl.appendChild(image);
     }
 
     // Toggle Step 2 state based on checkbox
@@ -492,13 +452,6 @@ export function renderSetupPage(options: SetupPageOptions): string {
 	      setTimeout(() => copyVaultBtn.textContent = originalText, 2000);
 	    });
 
-    copyRepoDesktopBtn.addEventListener("click", async () => {
-      await navigator.clipboard.writeText(repoSlug);
-      const originalText = copyRepoDesktopBtn.textContent;
-      copyRepoDesktopBtn.textContent = "Copied!";
-      setTimeout(() => copyRepoDesktopBtn.textContent = originalText, 2000);
-    });
-
 	    claimButton.addEventListener("click", async () => {
 	      claimButton.disabled = true;
 	      statusEl.textContent = "Claiming server...";
@@ -512,9 +465,12 @@ export function renderSetupPage(options: SetupPageOptions): string {
 	          body: JSON.stringify({ token, vaultId }),
 	        });
 
+        const data = await res.json().catch(() => null);
         if (!res.ok) {
-          const data = await res.json().catch(() => ({}));
-          throw new Error(data.error || "Claim failed");
+          throw new Error(data?.error || "Claim failed");
+        }
+        if (!data || typeof data.mobileSetupQrDataUrl !== "string") {
+          throw new Error("Setup QR generation failed");
         }
 
 	        // Setup the UI state
@@ -526,8 +482,8 @@ export function renderSetupPage(options: SetupPageOptions): string {
 	        const deepLink = "obsidian://yaos?" + new URLSearchParams({ action: "setup", host: window.location.origin, token: token, vaultId: vaultId }).toString();
 	        openBtn.href = deepLink;
 
-	        // QR Code pointing to the trampoline page
-	        renderQr(buildMobileSetupUrl(window.location.origin, token, vaultId));
+	        // QR Code pointing to the trampoline page, generated locally by the Worker.
+	        renderQr(data.mobileSetupQrDataUrl);
 
         // Switch Views
         initialView.style.display = "none";
@@ -545,7 +501,6 @@ export function renderSetupPage(options: SetupPageOptions): string {
 
 export function renderMobileSetupPage(options: MobileSetupPageOptions): string {
 	const safeHost = escapeHtml(options.host);
-	const deployRepo = normalizeDeployRepo(options.deployRepo);
 	return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -637,13 +592,9 @@ export function renderMobileSetupPage(options: MobileSetupPageOptions): string {
     <div id="status" class="status">Loading setup data...</div>
     <div class="recovery">
       <p>Don't have YAOS installed on this phone yet?</p>
-      <p style="margin-top: 6px;">1. Open BRAT in Obsidian.</p>
-      <p style="margin-top: 4px;">2. Add repo <code style="font-size:12px;">${deployRepo}</code>.</p>
-      <p style="margin-top: 4px; margin-bottom: 10px;">3. Enable YAOS, then come back and tap <strong>Connect Obsidian</strong>.</p>
-      <div class="row">
-        <a class="ghost" href="obsidian://show-plugin?id=obsidian42-brat">Open BRAT</a>
-        <button id="copy-repo" class="ghost" type="button">Copy repo slug</button>
-      </div>
+      <p style="margin-top: 6px;">1. In Obsidian, open <strong>Community plugins</strong>.</p>
+      <p style="margin-top: 4px;">2. Search for <strong>YAOS</strong>, install it, and enable it.</p>
+      <p style="margin-top: 4px; margin-bottom: 0;">3. Come back here and tap <strong>Connect Obsidian</strong>.</p>
     </div>
 
 	    <details>
@@ -666,8 +617,6 @@ export function renderMobileSetupPage(options: MobileSetupPageOptions): string {
 	    const hostInput = document.getElementById("host-input");
 	    const tokenInput = document.getElementById("token-input");
 	    const vaultInput = document.getElementById("vault-input");
-	    const copyRepoBtn = document.getElementById("copy-repo");
-	    const repoSlug = ${JSON.stringify(deployRepo)};
 
     function parseHash() {
       const hash = window.location.hash.startsWith("#") ? window.location.hash.slice(1) : window.location.hash;
@@ -696,17 +645,8 @@ export function renderMobileSetupPage(options: MobileSetupPageOptions): string {
       // Scrub the URL history to hide the token fragment immediately
       window.history.replaceState(null, "", window.location.pathname);
 
-      statusEl.textContent = "Ready. Install YAOS via BRAT if needed, then tap Connect Obsidian.";
+      statusEl.textContent = "Ready. Install YAOS from Community plugins if needed, then tap Connect Obsidian.";
     }
-
-    copyRepoBtn.addEventListener("click", async () => {
-      await navigator.clipboard.writeText(repoSlug);
-      const oldText = copyRepoBtn.textContent;
-      copyRepoBtn.textContent = "Copied!";
-      setTimeout(() => {
-        copyRepoBtn.textContent = oldText;
-      }, 1800);
-    });
   </script>
 </body>
 </html>`;

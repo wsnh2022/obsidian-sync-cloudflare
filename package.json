@@ -1,5 +1,5 @@
 {
-	"name": "obsidian-sync-cloudflare",
+	"name": "yaos-server",
 	"version": "0.3.0",
 	"private": true,
 	"description": "Cloudflare Worker server for Obsidian vault CRDT sync via y-partyserver",
@@ -10,13 +10,19 @@
 	},
 	"dependencies": {
 		"fflate": "^0.8.2",
+		"lib0": "0.2.117",
 		"partyserver": "0.3.2",
+		"qrcode-generator": "2.0.4",
 		"y-partyserver": "2.1.2",
 		"yjs": "^13.6.20"
 	},
 	"devDependencies": {
 		"@cloudflare/workers-types": "4.20260305.0",
-		"wrangler": "4.69.0",
-		"typescript": "^5.8.3"
+		"tsx": "^4.22.3",
+		"typescript": "^5.8.3",
+		"wrangler": "4.69.0"
+	},
+	"overrides": {
+		"nanoid": "5.1.16"
 	}
 }
